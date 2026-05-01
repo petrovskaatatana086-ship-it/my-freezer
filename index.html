@@ -1,10 +1,20 @@
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- Настройки для ярлыка на телефоне -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#f8fafc">
+    <meta name="apple-mobile-web-app-title" content="Заморозка">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Иконка приложения (Снежинка на синем фоне) -->
+    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/180/snowflake.png">
+    <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/48/snowflake.png">
+    
+    <meta name="theme-color" content="#3b82f6">
     <title>Scandi Freeze — Smart Kitchen</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -121,14 +131,6 @@
             border-radius: 1.5rem;
             border: 1px solid var(--scandi-border);
         }
-
-        .history-group-header {
-            cursor: pointer;
-            user-select: none;
-        }
-        .history-group-header:active { opacity: 0.7; }
-        .rotated-icon { transform: rotate(-90deg); transition: transform 0.2s ease; }
-        .expanded-icon { transform: rotate(0deg); }
 
         @keyframes pulse-red {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
@@ -301,7 +303,6 @@
         let inventory = JSON.parse(localStorage.getItem('scandi_stocks_v7')) || [];
         let historyData = JSON.parse(localStorage.getItem('scandi_history_v7')) || [];
         let menuPlan = JSON.parse(localStorage.getItem('scandi_menu_v7')) || {};
-        let expandedHistoryDates = JSON.parse(localStorage.getItem('scandi_exp_hist_v7')) || {};
         let currentTab = 'inventory';
         let pendingPlanItem = null;
 
@@ -324,7 +325,6 @@
             localStorage.setItem('scandi_stocks_v7', JSON.stringify(inventory));
             localStorage.setItem('scandi_history_v7', JSON.stringify(historyData));
             localStorage.setItem('scandi_menu_v7', JSON.stringify(menuPlan));
-            localStorage.setItem('scandi_exp_hist_v7', JSON.stringify(expandedHistoryDates));
         }
 
         function switchTab(tab) {
@@ -454,18 +454,15 @@
         }
 
         function renderHistory(container) {
-            // Подготовка данных для расширенной статистики
             const totalStockCount = inventory.filter(i => i.qty > 0).length;
             const lowItems = inventory.filter(i => i.qty > 0 && i.qty <= (i.minQty || 1));
             
-            // Расчет самого расходуемого продукта
             const usageMap = {};
             historyData.forEach(log => {
                 usageMap[log.name] = (usageMap[log.name] || 0) + 1;
             });
             const topUsed = Object.entries(usageMap).sort((a,b) => b[1] - a[1])[0]?.[0] || '—';
 
-            // Группировка запасов по локациям
             const locMap = {};
             inventory.filter(i => i.qty > 0).forEach(i => {
                 if(!locMap[i.location]) locMap[i.location] = [];
@@ -474,7 +471,6 @@
 
             container.innerHTML = `
                 <div class="space-y-6">
-                    <!-- Dashboard Cards -->
                     <div class="grid grid-cols-2 gap-4">
                         <div class="stat-card p-5 bg-blue-600 text-white border-none">
                             <i data-lucide="box" class="w-5 h-5 mb-3 opacity-60"></i>
@@ -488,7 +484,6 @@
                         </div>
                     </div>
 
-                    <!-- Мало осталось -->
                     <div class="stat-card p-6">
                         <div class="flex items-center gap-2 mb-4">
                             <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
@@ -506,7 +501,6 @@
                         ` : `<p class="text-[10px] text-slate-300 font-bold">ВСЕ В НАЛИЧИИ</p>`}
                     </div>
 
-                    <!-- Детальные запасы по локациям -->
                     <div class="stat-card p-6">
                         <h3 class="status-badge text-slate-400 mb-6">Всего в запасах (по местам)</h3>
                         <div class="space-y-6">
@@ -529,7 +523,6 @@
                         </div>
                     </div>
 
-                    <!-- Управление -->
                     <div class="stat-card p-6">
                         <h3 class="status-badge text-slate-400 mb-4">Данные и Архив</h3>
                         <div class="flex flex-wrap gap-2 mb-4">
@@ -537,13 +530,11 @@
                              <button onclick="triggerImport()" class="flex-1 py-3 bg-slate-50 rounded-xl text-[9px] font-bold uppercase active:bg-slate-100">Импорт</button>
                              <button onclick="clearHistory()" class="w-full py-3 text-red-400 text-[9px] font-bold uppercase">Очистить историю</button>
                         </div>
-                        
                         <div id="historyList" class="space-y-4"></div>
                     </div>
                 </div>
             `;
 
-            // Рендер истории внизу секции управления
             const hList = document.getElementById('historyList');
             const groups = {};
             historyData.forEach(log => {
@@ -569,7 +560,6 @@
             });
         }
 
-        // --- Voice Recognition ---
         function startVoiceRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) return;
@@ -675,7 +665,7 @@
             const amt = parseFloat(document.getElementById('planQtyDeduct').value);
             const item = inventory.find(i => i.id === pendingPlanItem.id);
             if (!item || isNaN(amt) || amt <= 0 || amt > item.qty) {
-                alert("Ошибка количества!"); return;
+                alert("Ошибка!"); return;
             }
             item.qty = parseFloat((item.qty - amt).toFixed(2));
             if (!menuPlan[day]) menuPlan[day] = [];
