@@ -1,0 +1,715 @@
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#f8fafc">
+    <title>Scandi Freeze — Smart Kitchen</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        :root {
+            --scandi-bg: #f8fafc;
+            --scandi-card: #ffffff;
+            --scandi-text: #0f172a;
+            --scandi-accent: #3b82f6;
+            --scandi-border: #f1f5f9;
+            --scandi-danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--scandi-bg);
+            color: var(--scandi-text);
+            -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
+            padding-bottom: 120px;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        .scandi-card {
+            background: var(--scandi-card);
+            border-radius: 1.5rem;
+            border: 1px solid var(--scandi-border);
+            transition: all 0.1s ease;
+            touch-action: manipulation;
+        }
+        
+        .scandi-card:active {
+            transform: scale(0.98);
+            background-color: #f1f5f9;
+        }
+
+        .card-low-stock {
+            border: 1.5px solid rgba(239, 68, 68, 0.4) !important;
+            background-color: #fffafb;
+        }
+
+        .category-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        /* Категории */
+        .pill-meat { background-color: #fee2e2; color: #991b1b; }
+        .pill-chicken { background-color: #ffedd5; color: #9a3412; }
+        .pill-fish { background-color: #e0f2fe; color: #075985; }
+        .pill-veg { background-color: #dcfce7; color: #166534; }
+        .pill-fruits { background-color: #fef3c7; color: #92400e; }
+        .pill-greens { background-color: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
+        .pill-pf { background-color: #fef9c3; color: #854d0e; }
+        .pill-bakery { background-color: #fafaf9; color: #44403c; border: 1px solid #e7e5e4; }
+        .pill-cookery { background-color: #f3e8ff; color: #6b21a8; }
+        .pill-other { background-color: #f1f5f9; color: #475569; }
+
+        .tab-bar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--scandi-border);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .fab {
+            background: var(--scandi-accent);
+            box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.5);
+        }
+
+        .modal-sheet {
+            background: var(--scandi-card);
+            border-radius: 2.5rem 2.5rem 0 0;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(100%);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+        }
+        .modal-active { transform: translateY(0) !important; }
+
+        .status-badge {
+            font-size: 10px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .compact-input {
+            border-bottom: 2px solid var(--scandi-border);
+            transition: border-color 0.2s;
+            border-radius: 0;
+            -webkit-appearance: none;
+        }
+        .compact-input:focus { border-color: var(--scandi-accent); outline: none; }
+
+        .day-card {
+            border-left: 4px solid var(--scandi-accent);
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 1.5rem;
+            border: 1px solid var(--scandi-border);
+        }
+
+        .history-group-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        .history-group-header:active { opacity: 0.7; }
+        .rotated-icon { transform: rotate(-90deg); transition: transform 0.2s ease; }
+        .expanded-icon { transform: rotate(0deg); }
+
+        @keyframes pulse-red {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .voice-active {
+            animation: pulse-red 1.5s infinite;
+            color: #ef4444 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="px-6 pt-10 pb-4 sticky top-0 bg-[#f8fafc]/90 backdrop-blur-md z-30">
+        <div class="flex justify-between items-center">
+            <div>
+                <span id="dateDisplay" class="status-badge text-slate-400">Сегодня</span>
+                <h1 id="pageTitle" class="text-3xl font-black tracking-tight text-slate-900">Запасы</h1>
+            </div>
+            <button onclick="openAddModal()" class="fab w-14 h-14 rounded-2xl flex items-center justify-center text-white active:scale-90 transition-transform">
+                <i data-lucide="plus" class="w-7 h-7"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="px-6 pb-32">
+        <!-- JS Content -->
+    </main>
+
+    <!-- Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 tab-bar h-24 px-2 flex justify-around items-center z-40">
+        <button onclick="switchTab('inventory')" class="flex flex-col items-center gap-1 flex-1 transition-all text-blue-600" id="btnInv">
+            <i data-lucide="package" class="w-6 h-6"></i>
+            <span class="text-[9px] font-bold uppercase tracking-tighter">Запасы</span>
+        </button>
+        <button onclick="switchTab('plan')" class="flex flex-col items-center gap-1 flex-1 opacity-30 transition-all" id="btnPlan">
+            <i data-lucide="calendar-check" class="w-6 h-6"></i>
+            <span class="text-[9px] font-bold uppercase tracking-tighter">Меню</span>
+        </button>
+        <button onclick="switchTab('shopping')" class="flex flex-col items-center gap-1 flex-1 opacity-30 transition-all" id="btnShop">
+            <i data-lucide="shopping-bag" class="w-6 h-6"></i>
+            <span class="text-[9px] font-bold uppercase tracking-tighter">Купить</span>
+        </button>
+        <button onclick="switchTab('history')" class="flex flex-col items-center gap-1 flex-1 opacity-30 transition-all" id="btnHist">
+            <i data-lucide="pie-chart" class="w-6 h-6"></i>
+            <span class="text-[9px] font-bold uppercase tracking-tighter">Аналитика</span>
+        </button>
+    </nav>
+
+    <!-- Overlay -->
+    <div id="modalOverlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden" onclick="closeAllModals()"></div>
+
+    <!-- Modal: Item Edit -->
+    <div id="itemModal" class="modal-sheet fixed bottom-0 left-0 right-0 z-[60] p-8 max-h-[92vh] overflow-y-auto">
+        <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
+        <div class="space-y-6 pb-12">
+            <input type="hidden" id="editItemId">
+            <div class="relative">
+                <label class="status-badge text-slate-400 ml-1">Название</label>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="itemName" class="compact-input flex-1 py-3 bg-transparent text-xl font-bold" placeholder="Например: Фарш говяжий">
+                    <button id="voiceBtn" onclick="startVoiceRecognition()" class="p-3 bg-slate-50 rounded-xl text-slate-400 transition-all">
+                        <i data-lucide="mic" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="status-badge text-slate-400 ml-1">Количество</label>
+                    <input type="number" id="itemQty" step="0.1" class="compact-input w-full py-3 bg-transparent font-black text-2xl text-blue-600">
+                </div>
+                <div>
+                    <label class="status-badge text-slate-400 ml-1">Мин. порог</label>
+                    <input type="number" id="itemMinQty" step="0.1" value="1" class="compact-input w-full py-3 bg-transparent font-black text-2xl text-red-400">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="status-badge text-slate-400 ml-1">Ед. изм.</label>
+                    <select id="itemUnit" class="compact-input w-full py-3 bg-transparent font-bold">
+                        <option value="шт">шт</option>
+                        <option value="кг">кг</option>
+                        <option value="г">г</option>
+                        <option value="мл">мл</option>
+                        <option value="л">л</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="status-badge text-slate-400 ml-1">Категория</label>
+                    <select id="itemCat" class="compact-input w-full py-3 bg-transparent font-bold">
+                        <option value="мясо">🥩 Мясо</option>
+                        <option value="курица">🍗 Курица</option>
+                        <option value="рыба">🐟 Рыба</option>
+                        <option value="овощи">🥦 Овощи</option>
+                        <option value="фрукты">🍎 Фрукты</option>
+                        <option value="п/ф">🥟 П/Ф</option>
+                        <option value="выпечка">🥐 Выпечка</option>
+                        <option value="кулинария">🥗 Кулинария</option>
+                        <option value="зелень">🌿 Зелень</option>
+                        <option value="другое">📦 Разное</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="status-badge text-slate-400 ml-1">Локация</label>
+                    <select id="itemLoc" class="compact-input w-full py-3 bg-transparent font-bold">
+                        <option value="Дом">🏠 Дом</option>
+                        <option value="Сарай ст.">🏚 Сарай ст.</option>
+                        <option value="Сарай н.">🏢 Сарай н.</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="status-badge text-slate-400 ml-1">Годен (дн)</label>
+                    <input type="number" id="itemShelfLife" value="90" class="compact-input w-full py-3 bg-transparent font-bold">
+                </div>
+            </div>
+            <div>
+                <label class="status-badge text-slate-400 ml-1">Дата заморозки</label>
+                <input type="date" id="itemDate" class="compact-input w-full py-3 bg-transparent font-medium">
+            </div>
+            <div class="flex gap-4 pt-4">
+                <button id="deleteBtn" onclick="deleteCurrentItem()" class="flex-1 py-5 bg-red-50 text-red-600 rounded-2xl font-black uppercase text-[10px]">Удалить</button>
+                <button onclick="saveItem()" class="flex-[2] py-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px]">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Plan Item -->
+    <div id="planModal" class="modal-sheet fixed bottom-0 left-0 right-0 z-[60] p-8 max-h-[92vh] overflow-y-auto">
+        <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
+        <h2 class="text-xl font-bold mb-6">Добавить в меню</h2>
+        <div class="space-y-6">
+            <div>
+                <label class="status-badge text-slate-400 ml-1">День недели</label>
+                <select id="planDay" class="compact-input w-full py-3 bg-transparent font-bold text-lg">
+                    <option value="Понедельник">Понедельник</option>
+                    <option value="Вторник">Вторник</option>
+                    <option value="Среда">Среда</option>
+                    <option value="Четверг">Четверг</option>
+                    <option value="Пятница">Пятница</option>
+                    <option value="Суббота">Суббота</option>
+                    <option value="Воскресенье">Воскресенье</option>
+                </select>
+            </div>
+            
+            <div id="planSource"></div>
+
+            <div>
+                <label class="status-badge text-slate-400 ml-1">Количество для списания</label>
+                <div class="flex items-end gap-2">
+                    <input type="number" id="planQtyDeduct" step="0.1" class="compact-input flex-1 py-3 bg-transparent font-black text-2xl text-blue-600" placeholder="0">
+                    <span id="planUnitLabel" class="pb-3 font-bold text-slate-400 uppercase text-xs">ед</span>
+                </div>
+            </div>
+
+            <button onclick="confirmAddToPlan()" class="w-full py-6 bg-blue-600 text-white rounded-2xl font-black uppercase text-[11px] shadow-lg shadow-blue-200 active:scale-95 transition-transform">
+                Запланировать и списать
+            </button>
+        </div>
+    </div>
+
+    <input type="file" id="importInput" class="hidden" accept=".json" onchange="handleImport(event)">
+
+    <script>
+        // Состояние
+        let inventory = JSON.parse(localStorage.getItem('scandi_stocks_v7')) || [];
+        let historyData = JSON.parse(localStorage.getItem('scandi_history_v7')) || [];
+        let menuPlan = JSON.parse(localStorage.getItem('scandi_menu_v7')) || {};
+        let expandedHistoryDates = JSON.parse(localStorage.getItem('scandi_exp_hist_v7')) || {};
+        let currentTab = 'inventory';
+        let pendingPlanItem = null;
+
+        const categories = {
+            'мясо': { label: 'Мясо', class: 'pill-meat' },
+            'курица': { label: 'Курица', class: 'pill-chicken' },
+            'рыба': { label: 'Рыба', class: 'pill-fish' },
+            'овощи': { label: 'Овощи', class: 'pill-veg' },
+            'фрукты': { label: 'Фрукты', class: 'pill-fruits' },
+            'п/ф': { label: 'П/Ф', class: 'pill-pf' },
+            'выпечка': { label: 'Выпечка', class: 'pill-bakery' },
+            'кулинария': { label: 'Кулинария', class: 'pill-cookery' },
+            'зелень': { label: 'Зелень', class: 'pill-greens' },
+            'другое': { label: 'Разное', class: 'pill-other' }
+        };
+
+        const days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+
+        function save() {
+            localStorage.setItem('scandi_stocks_v7', JSON.stringify(inventory));
+            localStorage.setItem('scandi_history_v7', JSON.stringify(historyData));
+            localStorage.setItem('scandi_menu_v7', JSON.stringify(menuPlan));
+            localStorage.setItem('scandi_exp_hist_v7', JSON.stringify(expandedHistoryDates));
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const titles = { inventory: 'Запасы', plan: 'Меню', shopping: 'Купить', history: 'Аналитика' };
+            document.getElementById('pageTitle').innerText = titles[tab];
+            
+            const btnIds = { inventory: 'btnInv', plan: 'btnPlan', shopping: 'btnShop', history: 'btnHist' };
+            Object.values(btnIds).forEach(id => {
+                const b = document.getElementById(id);
+                b.classList.add('opacity-30');
+                b.classList.remove('text-blue-600');
+            });
+            const activeBtn = document.getElementById(btnIds[tab]);
+            activeBtn.classList.remove('opacity-30');
+            activeBtn.classList.add('text-blue-600');
+            
+            render();
+        }
+
+        function render() {
+            const container = document.getElementById('mainContent');
+            container.innerHTML = '';
+            document.getElementById('dateDisplay').innerText = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+
+            if (currentTab === 'inventory') renderInventory(container);
+            if (currentTab === 'plan') renderPlan(container);
+            if (currentTab === 'shopping') renderShopping(container);
+            if (currentTab === 'history') renderHistory(container);
+
+            lucide.createIcons();
+        }
+
+        function renderInventory(container) {
+            const active = inventory.filter(i => i.qty > 0);
+            if (!active.length) {
+                container.innerHTML = `<div class="py-40 text-center opacity-20 text-[10px] font-bold uppercase tracking-widest">Список пуст</div>`;
+                return;
+            }
+            
+            const grouped = {};
+            active.forEach(i => {
+                if (!grouped[i.category]) grouped[i.category] = [];
+                grouped[i.category].push(i);
+            });
+
+            Object.keys(grouped).sort().forEach(cat => {
+                const sec = document.createElement('div');
+                sec.className = 'mb-8';
+                sec.innerHTML = `<div class="category-pill ${categories[cat].class}">${categories[cat].label}</div><div class="grid gap-3"></div>`;
+                const list = sec.querySelector('.grid');
+                grouped[cat].forEach(item => {
+                    const isLow = item.qty <= (item.minQty || 1);
+                    const card = document.createElement('div');
+                    card.className = `scandi-card p-4 flex justify-between items-center shadow-sm ${isLow ? 'card-low-stock' : ''}`;
+                    card.innerHTML = `
+                        <div class="flex-1" onclick="openEditModal(${item.id})">
+                            <div class="flex items-center gap-2">
+                                <p class="font-bold text-slate-800 text-sm">${item.name}</p>
+                                ${isLow ? '<i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-red-500"></i>' : ''}
+                            </div>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tight">${item.location}</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="text-right" onclick="openEditModal(${item.id})">
+                                <p class="font-black ${isLow ? 'text-red-500' : 'text-slate-900'}">${item.qty} ${item.unit}</p>
+                            </div>
+                            <button onclick="addToPlanFromInv(${item.id})" class="p-3 bg-blue-50 text-blue-600 rounded-xl active:scale-90 transition-transform">
+                                <i data-lucide="calendar-plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(card);
+                });
+                container.appendChild(sec);
+            });
+        }
+
+        function renderPlan(container) {
+            container.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="status-badge text-slate-400">План на неделю</h2>
+                    <button onclick="clearPlan()" class="text-[9px] font-bold uppercase text-red-400">Очистить меню</button>
+                </div>
+                <div class="space-y-4"></div>
+            `;
+            const list = container.querySelector('.space-y-4');
+
+            days.forEach(day => {
+                const dayBox = document.createElement('div');
+                dayBox.className = 'scandi-card p-5 day-card';
+                const items = menuPlan[day] || [];
+                dayBox.innerHTML = `
+                    <h3 class="font-black text-slate-900 mb-3">${day}</h3>
+                    <div class="space-y-2">
+                        ${items.length ? items.map((it, idx) => `
+                            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                <div>
+                                    <span class="text-xs font-bold text-slate-700">${it.name}</span>
+                                    <p class="text-[8px] text-slate-400 uppercase font-black tracking-widest mt-0.5">Списано: ${it.deducted} ${it.unit}</p>
+                                </div>
+                                <button onclick="removeFromPlan('${day}', ${idx})" class="p-2 bg-white text-emerald-500 rounded-lg shadow-sm">
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        `).join('') : '<p class="text-[10px] text-slate-300 font-bold uppercase">Ничего не запланировано</p>'}
+                    </div>
+                `;
+                list.appendChild(dayBox);
+            });
+        }
+
+        function renderShopping(container) {
+            const low = inventory.filter(i => i.qty <= (i.minQty || 1));
+            container.innerHTML = `<h2 class="status-badge text-red-500 mb-6 tracking-wider">Список покупок</h2>`;
+            if(!low.length) {
+                container.innerHTML += `<div class="py-20 text-center opacity-20 text-[10px] font-bold">ЗАПАСЫ В ПОРЯДКЕ</div>`;
+                return;
+            }
+            low.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'scandi-card p-4 mb-3 flex justify-between items-center border-l-4 border-l-red-400';
+                div.innerHTML = `<div><p class="font-bold">${item.name}</p><p class="text-[9px] text-red-400 font-bold uppercase">Остаток: ${item.qty} ${item.unit}</p></div> 
+                                 <button onclick="openEditModal(${item.id})" class="p-3 bg-slate-100 rounded-xl"><i data-lucide="plus" class="w-4 h-4"></i></button>`;
+                container.appendChild(div);
+            });
+        }
+
+        function renderHistory(container) {
+            // Подготовка данных для расширенной статистики
+            const totalStockCount = inventory.filter(i => i.qty > 0).length;
+            const lowItems = inventory.filter(i => i.qty > 0 && i.qty <= (i.minQty || 1));
+            
+            // Расчет самого расходуемого продукта
+            const usageMap = {};
+            historyData.forEach(log => {
+                usageMap[log.name] = (usageMap[log.name] || 0) + 1;
+            });
+            const topUsed = Object.entries(usageMap).sort((a,b) => b[1] - a[1])[0]?.[0] || '—';
+
+            // Группировка запасов по локациям
+            const locMap = {};
+            inventory.filter(i => i.qty > 0).forEach(i => {
+                if(!locMap[i.location]) locMap[i.location] = [];
+                locMap[i.location].push(i);
+            });
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <!-- Dashboard Cards -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="stat-card p-5 bg-blue-600 text-white border-none">
+                            <i data-lucide="box" class="w-5 h-5 mb-3 opacity-60"></i>
+                            <p class="text-[9px] font-black uppercase opacity-80 mb-1">Позиций в базе</p>
+                            <p class="text-2xl font-black">${totalStockCount}</p>
+                        </div>
+                        <div class="stat-card p-5 bg-orange-500 text-white border-none">
+                            <i data-lucide="trending-up" class="w-5 h-5 mb-3 opacity-60"></i>
+                            <p class="text-[9px] font-black uppercase opacity-80 mb-1">Топ расхода</p>
+                            <p class="text-sm font-black truncate">${topUsed}</p>
+                        </div>
+                    </div>
+
+                    <!-- Мало осталось -->
+                    <div class="stat-card p-6">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                            <h3 class="status-badge text-slate-400">Критический остаток</h3>
+                        </div>
+                        ${lowItems.length ? `
+                            <div class="space-y-3">
+                                ${lowItems.map(i => `
+                                    <div class="flex justify-between items-center text-xs">
+                                        <span class="font-bold text-slate-700">${i.name}</span>
+                                        <span class="font-black text-red-500">${i.qty} ${i.unit}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : `<p class="text-[10px] text-slate-300 font-bold">ВСЕ В НАЛИЧИИ</p>`}
+                    </div>
+
+                    <!-- Детальные запасы по локациям -->
+                    <div class="stat-card p-6">
+                        <h3 class="status-badge text-slate-400 mb-6">Всего в запасах (по местам)</h3>
+                        <div class="space-y-6">
+                            ${Object.keys(locMap).map(loc => `
+                                <div>
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <i data-lucide="map-pin" class="w-3 h-3 text-blue-500"></i>
+                                        <p class="text-[10px] font-black uppercase text-blue-600 tracking-widest">${loc}</p>
+                                    </div>
+                                    <div class="pl-5 border-l-2 border-slate-50 space-y-3">
+                                        ${locMap[loc].map(i => `
+                                            <div class="flex justify-between items-end border-b border-slate-50 pb-2">
+                                                <span class="text-xs font-medium text-slate-600">${i.name}</span>
+                                                <span class="text-xs font-black text-slate-900">${i.qty} ${i.unit}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Управление -->
+                    <div class="stat-card p-6">
+                        <h3 class="status-badge text-slate-400 mb-4">Данные и Архив</h3>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                             <button onclick="exportData()" class="flex-1 py-3 bg-slate-50 rounded-xl text-[9px] font-bold uppercase active:bg-slate-100">Экспорт</button>
+                             <button onclick="triggerImport()" class="flex-1 py-3 bg-slate-50 rounded-xl text-[9px] font-bold uppercase active:bg-slate-100">Импорт</button>
+                             <button onclick="clearHistory()" class="w-full py-3 text-red-400 text-[9px] font-bold uppercase">Очистить историю</button>
+                        </div>
+                        
+                        <div id="historyList" class="space-y-4"></div>
+                    </div>
+                </div>
+            `;
+
+            // Рендер истории внизу секции управления
+            const hList = document.getElementById('historyList');
+            const groups = {};
+            historyData.forEach(log => {
+                const dateKey = new Date(log.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+                if (!groups[dateKey]) groups[dateKey] = [];
+                groups[dateKey].push(log);
+            });
+
+            Object.keys(groups).sort((a, b) => new Date(groups[b][0].date) - new Date(groups[a][0].date)).slice(0, 5).forEach(dateKey => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-tighter">${dateKey}</p>
+                    <div class="space-y-1">
+                        ${groups[dateKey].map(log => `
+                            <div class="flex justify-between text-[10px]">
+                                <span class="text-slate-500">${log.name}</span>
+                                <span class="text-red-400">-${log.amount}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                hList.appendChild(div);
+            });
+        }
+
+        // --- Voice Recognition ---
+        function startVoiceRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+            const recognition = new SpeechRecognition();
+            const voiceBtn = document.getElementById('voiceBtn');
+            const itemNameInput = document.getElementById('itemName');
+            recognition.lang = 'ru-RU';
+            recognition.onstart = () => voiceBtn.classList.add('voice-active');
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                itemNameInput.value = transcript.charAt(0).toUpperCase() + transcript.slice(1);
+            };
+            recognition.onend = () => voiceBtn.classList.remove('voice-active');
+            recognition.start();
+        }
+
+        function toggleModal(id, show) {
+            const m = document.getElementById(id);
+            const o = document.getElementById('modalOverlay');
+            if (show) {
+                o.classList.remove('hidden');
+                setTimeout(() => m.classList.add('modal-active'), 10);
+            } else {
+                m.classList.remove('modal-active');
+                setTimeout(() => o.classList.add('hidden'), 300);
+            }
+        }
+
+        function closeAllModals() {
+            toggleModal('itemModal', false);
+            toggleModal('planModal', false);
+        }
+
+        function openAddModal() {
+            document.getElementById('editItemId').value = '';
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemQty').value = 1;
+            document.getElementById('itemMinQty').value = 1; 
+            document.getElementById('itemDate').valueAsDate = new Date();
+            document.getElementById('deleteBtn').classList.add('hidden');
+            toggleModal('itemModal', true);
+        }
+
+        function openEditModal(id) {
+            const item = inventory.find(i => i.id === id);
+            if (!item) return;
+            document.getElementById('editItemId').value = item.id;
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemQty').value = item.qty;
+            document.getElementById('itemMinQty').value = item.minQty || 1;
+            document.getElementById('itemUnit').value = item.unit;
+            document.getElementById('itemCat').value = item.category;
+            document.getElementById('itemLoc').value = item.location;
+            document.getElementById('itemDate').value = item.date;
+            document.getElementById('deleteBtn').classList.remove('hidden');
+            toggleModal('itemModal', true);
+        }
+
+        function saveItem() {
+            const id = document.getElementById('editItemId').value;
+            const data = {
+                id: id ? parseInt(id) : Date.now(),
+                name: document.getElementById('itemName').value || 'Без названия',
+                qty: parseFloat(document.getElementById('itemQty').value) || 0,
+                minQty: parseFloat(document.getElementById('itemMinQty').value) || 1,
+                unit: document.getElementById('itemUnit').value,
+                category: document.getElementById('itemCat').value,
+                location: document.getElementById('itemLoc').value,
+                date: document.getElementById('itemDate').value
+            };
+            if (id) {
+                const idx = inventory.findIndex(i => i.id === parseInt(id));
+                inventory[idx] = data;
+            } else {
+                inventory.push(data);
+            }
+            save(); closeAllModals(); render();
+        }
+
+        function deleteCurrentItem() {
+            const id = parseInt(document.getElementById('editItemId').value);
+            inventory = inventory.filter(i => i.id !== id);
+            save(); closeAllModals(); render();
+        }
+
+        function addToPlanFromInv(id) {
+            const item = inventory.find(i => i.id === id);
+            pendingPlanItem = item;
+            let def = 1;
+            if (item.unit === 'г' || item.unit === 'мл') def = 100;
+            document.getElementById('planQtyDeduct').value = def;
+            document.getElementById('planUnitLabel').innerText = item.unit;
+            document.getElementById('planSource').innerHTML = `
+                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
+                    <div><p class="font-bold text-slate-800">${item.name}</p></div>
+                    <div class="text-right"><p class="text-xs font-black">${item.qty} ${item.unit}</p></div>
+                </div>`;
+            toggleModal('planModal', true);
+        }
+
+        function confirmAddToPlan() {
+            const day = document.getElementById('planDay').value;
+            const amt = parseFloat(document.getElementById('planQtyDeduct').value);
+            const item = inventory.find(i => i.id === pendingPlanItem.id);
+            if (!item || isNaN(amt) || amt <= 0 || amt > item.qty) {
+                alert("Ошибка количества!"); return;
+            }
+            item.qty = parseFloat((item.qty - amt).toFixed(2));
+            if (!menuPlan[day]) menuPlan[day] = [];
+            menuPlan[day].push({ name: item.name, itemId: item.id, deducted: amt, unit: item.unit });
+            historyData.push({ name: item.name, amount: amt, unit: item.unit, date: new Date().toISOString() });
+            save(); closeAllModals(); render();
+        }
+
+        function removeFromPlan(day, idx) {
+            menuPlan[day].splice(idx, 1);
+            save(); render();
+        }
+
+        function clearPlan() { if(confirm("Очистить меню?")) { menuPlan = {}; save(); render(); } }
+        function clearHistory() { if(confirm("Удалить историю?")) { historyData = []; save(); render(); } }
+        function exportData() {
+            const blob = new Blob([JSON.stringify({ inventory, historyData, menuPlan })], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `scandi_data.json`;
+            a.click();
+        }
+        function triggerImport() { document.getElementById('importInput').click(); }
+        function handleImport(e) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const d = JSON.parse(ev.target.result);
+                inventory = d.inventory; historyData = d.historyData; menuPlan = d.menuPlan;
+                save(); render();
+            };
+            reader.readAsText(e.target.files[0]);
+        }
+
+        document.addEventListener('DOMContentLoaded', render);
+    </script>
+</body>
+</html>
